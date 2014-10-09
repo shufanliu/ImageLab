@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
-import ca.sfu.mobileodr.R;
+import com.shufanliu.imagelab.R;
 import net.sourceforge.zbar.Config;
 import net.sourceforge.zbar.Image;
 import net.sourceforge.zbar.ImageScanner;
@@ -200,7 +200,7 @@ public class CaptureFragment extends Fragment {
 
 			// calculate ODR
 			ODRValue odrValue = new ODRValue();
-			odrValue.calculateRGB(BitmapFactory.decodeByteArray(data, 0,
+			odrValue.calculateRGBCircle(BitmapFactory.decodeByteArray(data, 0,
 					data.length));
 			String meanR = odrValue.getMeanRGBStr(0);
 			String meanG = odrValue.getMeanRGBStr(1);

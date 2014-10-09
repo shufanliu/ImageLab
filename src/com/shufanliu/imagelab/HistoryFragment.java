@@ -2,7 +2,7 @@ package com.shufanliu.imagelab;
 
 import java.util.List;
 
-import ca.sfu.mobileodr.R;
+import com.shufanliu.imagelab.R;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;

@@ -2,7 +2,7 @@ package com.shufanliu.imagelab;
 
 import java.util.Locale;
 
-import ca.sfu.mobileodr.R;
+import com.shufanliu.imagelab.R;
 import android.app.ActionBar;
 import android.app.FragmentTransaction;
 import android.os.Bundle;

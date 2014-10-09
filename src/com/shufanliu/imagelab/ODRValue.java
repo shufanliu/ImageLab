@@ -236,6 +236,51 @@ public class ODRValue {
 		Common.storeImage(Bitmap.createBitmap(pixels, sWidth, sHeight, Bitmap.Config.RGB_565), "S0");
 	}
 	
+	public void calculateRGBCircle(Bitmap image) {
+		
+		// rotate the bitmap
+		image = Common.rotateBitmap(image, 90);
+		
+		// setup the parameters
+		int width = image.getWidth();
+		int height = image.getHeight();
+		
+		// fit the parameters by calculating its ratio comparing to 480x640
+		double hRatio = width / 480.0;
+		double vRatio = height / 640.0 ;
+		int sWidth = (int) (160 * hRatio);
+		int sHeight = (int) (160 * vRatio);
+		int YPos = (int) (240 * vRatio);
+		int xPos = (int) (160 * hRatio);
+		
+		// Log.e(TAG, width + " : " + height + ", Ratio: " + hRatio + " : " + vRatio);
+		
+		Common.storeImage(image, "S");
+
+		// get average RGB values
+		int[] pixels = new int[sWidth * sHeight];
+		image.getPixels(pixels, 0, sWidth, xPos, YPos, sWidth, sHeight);
+		
+		// get pixels inside the circle
+		int r = sWidth / 2;
+		int x0 = xPos + r;
+		int y0 = YPos + r;
+		int n = 0;
+		int[] pixelsC = new int[20079];
+		for (int x = xPos; x < xPos + sWidth; x++) {
+			for (int y = YPos; y < YPos + sHeight; y++) {
+				if (Math.pow(x - x0, 2.0) + Math.pow(y - y0, 2.0) <= Math.pow(r, 2.0)) {
+					pixelsC[n] = image.getPixel(x, y);
+					n = n + 1;
+				}
+			}
+		}
+		Log.e(TAG, "n = " + n + " r = " + r);
+		RGB = getMeanRGB(pixelsC);
+		
+		Common.storeImage(Bitmap.createBitmap(pixels, sWidth, sHeight, Bitmap.Config.RGB_565), "S0");
+	}
+	
 	private class SampleStats {
 		
 		private float mean;
