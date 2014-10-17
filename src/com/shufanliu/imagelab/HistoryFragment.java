@@ -3,6 +3,8 @@ package com.shufanliu.imagelab;
 import java.util.List;
 
 import com.shufanliu.imagelab.R;
+
+import android.app.Activity;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -12,13 +14,12 @@ import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
-import android.widget.TextView;
 
 public class HistoryFragment extends Fragment {
-
+	
 	private static HistoryDataSource datasource;
 	public static ArrayAdapter<History> adapter;
-
+	
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
@@ -76,10 +77,10 @@ public class HistoryFragment extends Fragment {
 		//
 		// // Assign adapter to ListView
 		// listView.setAdapter(adapter);
-
+		
 		return rootView;
 	}
-
+	
 	public static void updateAdapter() {
 		datasource.open();
 		List<History> values = datasource.getAllComments();
@@ -91,5 +92,11 @@ public class HistoryFragment extends Fragment {
 			}
 		}
 		adapter.notifyDataSetChanged();
+	}
+
+	@Override
+	public void onAttach(Activity activity) {
+		super.onAttach(activity);
+		((MainActivity) activity).onSectionAttached(3);
 	}
 }

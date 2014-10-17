@@ -30,6 +30,8 @@ public class CameraPreview extends SurfaceView implements
 		super(context);
 		mCamera = camera;
 		mContext = context;
+		previewCallback = previewCb;
+        autoFocusCallback = autoFocusCb;
 		
 		// supported preview sizes
         mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
@@ -110,8 +112,6 @@ public class CameraPreview extends SurfaceView implements
 		// preview.
 		try {
 			mCamera.setPreviewDisplay(holder);
-			mCamera.startPreview();
-			mCamera.autoFocus(autoFocusCallback);
 		} catch (IOException e) {
 			Log.d("Camera", "Error setting camera preview: " + e.getMessage());
 		}
@@ -155,7 +155,6 @@ public class CameraPreview extends SurfaceView implements
 			mCamera.setPreviewCallback(previewCallback);
 			mCamera.startPreview();
 			mCamera.autoFocus(autoFocusCallback);
-
 		} catch (Exception e) {
 			Log.d(TAG, "Error starting camera preview: " + e.getMessage());
 		}

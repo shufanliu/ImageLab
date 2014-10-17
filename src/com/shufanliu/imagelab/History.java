@@ -2,6 +2,7 @@ package com.shufanliu.imagelab;
 
 public class History {
 	private long id;
+	private String taskName;
 	private String history;
 
 	public long getId() {

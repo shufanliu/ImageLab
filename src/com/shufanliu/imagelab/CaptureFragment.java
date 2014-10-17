@@ -1,32 +1,24 @@
 package com.shufanliu.imagelab;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 
-import com.shufanliu.imagelab.R;
 import net.sourceforge.zbar.Config;
 import net.sourceforge.zbar.Image;
 import net.sourceforge.zbar.ImageScanner;
 import net.sourceforge.zbar.Symbol;
 import net.sourceforge.zbar.SymbolSet;
-import android.content.Context;
-import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
+
+import com.shufanliu.imagelab.R;
+
+import android.app.Activity;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.PreviewCallback;
 import android.hardware.Camera.Size;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -42,25 +34,27 @@ import android.widget.TextView;
 import android.widget.ZoomControls;
 
 public class CaptureFragment extends Fragment {
-
+	
 	private static final String TAG = "CameraFragment";
 	
 	private View rootView;
 	public static Camera mCamera;
 	private CameraPreview mPreview;
 	private Button snapButton;
+	private Button focusButton;
 	private boolean onPreview = true;
 	private int currentZoomLevel = 0, maxZoomLevel = 0;
 	private TextView statusText;
 
 	ImageScanner scanner;
 	private Handler autoFocusHandler;
+	public static AutoFocusCallback autoFocusCB;
 	private boolean barcodeScanned = false;
 
 	static {
 		System.loadLibrary("iconv");
 	}
-
+	
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
@@ -69,6 +63,7 @@ public class CaptureFragment extends Fragment {
 		
 		// Make camera preview to have ratio of 4:3
 		final FrameLayout previewFrame = (FrameLayout) rootView.findViewById(R.id.frameLayout1);
+		
 		previewFrame.post(new Runnable() {
 
 	        @Override
@@ -78,10 +73,6 @@ public class CaptureFragment extends Fragment {
 	            previewFrame.setLayoutParams(lp);
 	        }
 	    });
-
-		// Setup Camera
-		autoFocusHandler = new Handler();
-		cameraSetup();
 
 		// Setup Barcode Scanner
 		/* Instance barcode scanner */
@@ -110,11 +101,29 @@ public class CaptureFragment extends Fragment {
 	                }
 					mCamera.setPreviewCallback(previewCb);
 					mCamera.startPreview();
+					rootView.findViewById(R.id.frameLayout1).postDelayed(doAutoFocus, 1000);
 					snapButton.setText("Capture");
+					//mCamera.autoFocus(autoFocusCB);
+				}
+			}
+		});
+		
+		// Setup the focus button
+		focusButton = (Button) rootView.findViewById(R.id.button1);
+		focusButton.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				if (onPreview) {
+					Log.e(TAG, "try to focus");
 					mCamera.autoFocus(autoFocusCB);
 				}
 			}
 		});
+		
+		// Setup Camera
+		autoFocusHandler = new Handler();
+		cameraSetup();
 
 		return rootView;
 	}
@@ -126,8 +135,8 @@ public class CaptureFragment extends Fragment {
 
 		// Set Camera parameters
 		Camera.Parameters params = mCamera.getParameters();
-		//params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
 		params.setPreviewSize(640, 480);
+		params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
 
 		// Setup the ZoomControl
 		ZoomControls zoomControls = (ZoomControls) rootView
@@ -168,6 +177,16 @@ public class CaptureFragment extends Fragment {
 
 		mCamera.setParameters(params);
 
+		// Mimic continuous auto-focusing
+		autoFocusCB = new AutoFocusCallback() {
+			@Override
+			public void onAutoFocus(boolean success, Camera camera) {
+				Log.e(TAG, "onAutoFocus, onPreview = " + Boolean.toString(onPreview));
+				//autoFocusHandler.postDelayed(doAutoFocus, 1000);
+				rootView.findViewById(R.id.frameLayout1).postDelayed(doAutoFocus, 1000);
+			}
+		};
+		
 		// Create our Preview view and set it as the content of our
 		// activity.
 		mPreview = new CameraPreview(getActivity(), mCamera, previewCb,
@@ -178,7 +197,11 @@ public class CaptureFragment extends Fragment {
 		preview.addView(mPreview);
 		ImageView grid = (ImageView) rootView.findViewById(R.id.imageView1);
 		preview.bringChildToFront(grid);
-
+		
+    	onPreview = true;		
+        mCamera.startPreview();
+        rootView.findViewById(R.id.frameLayout1).postDelayed(doAutoFocus, 2000);
+        //autoFocusHandler.postDelayed(doAutoFocus, 1000);
 	}
 
 	/** A safe way to get an instance of the Camera object. */
@@ -230,26 +253,6 @@ public class CaptureFragment extends Fragment {
 			datasource.open();
 			History history = datasource.createHistory(outputText);
 			datasource.close();
-			
-//			// Scan for barcode
-//			Camera.Parameters parameters = camera.getParameters();
-//			Size size = parameters.getPreviewSize();
-//			Image barcode = new Image(size.width, size.height, "Y800");
-//			barcode.setData(data);
-//
-//			int result = scanner.scanImage(barcode);
-//
-//			if (result != 0) {
-//				onPreview = false;
-//				mCamera.setPreviewCallback(null);
-//				mCamera.stopPreview();
-//
-//				SymbolSet syms = scanner.getResults();
-//				for (Symbol sym : syms) {
-//					statusText.setText("barcode result " + sym.getData());
-//					barcodeScanned = true;
-//				}
-//			}
 		}
 	};
 
@@ -278,16 +281,9 @@ public class CaptureFragment extends Fragment {
 		}
 	};
 
-	// Mimic continuous auto-focusing
-	AutoFocusCallback autoFocusCB = new AutoFocusCallback() {
-		@Override
-		public void onAutoFocus(boolean success, Camera camera) {
-			autoFocusHandler.postDelayed(doAutoFocus, 1000);
-		}
-	};
-	
     private Runnable doAutoFocus = new Runnable() {
         public void run() {
+        	Log.e(TAG, "try to focus, onPreview = " + Boolean.toString(onPreview));
             if (onPreview)
                 mCamera.autoFocus(autoFocusCB);
         }
@@ -309,6 +305,7 @@ public class CaptureFragment extends Fragment {
 
 	private void releaseCamera() {
 		if (mCamera != null) {
+			onPreview = false;
 			mCamera.stopPreview();
 			mPreview.getHolder().removeCallback(mPreview);
 			mCamera.setPreviewCallback(null);
@@ -317,4 +314,9 @@ public class CaptureFragment extends Fragment {
 		}
 	}
 
+	@Override
+	public void onAttach(Activity activity) {
+		super.onAttach(activity);
+		((MainActivity) activity).onSectionAttached(2);
+	}
 }
