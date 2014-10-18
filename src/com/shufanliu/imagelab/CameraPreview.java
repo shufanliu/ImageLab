@@ -25,18 +25,15 @@ public class CameraPreview extends SurfaceView implements
 	private PreviewCallback previewCallback;
 	private AutoFocusCallback autoFocusCallback;
 
-	public CameraPreview(Context context, Camera camera,
-			PreviewCallback previewCb, AutoFocusCallback autoFocusCb) {
+	private boolean onPreview = true;
+
+	public CameraPreview(Context context, Camera camera,PreviewCallback previewCb,
+			AutoFocusCallback autoFocusCb) {
 		super(context);
-		mCamera = camera;
 		mContext = context;
 		previewCallback = previewCb;
-        autoFocusCallback = autoFocusCb;
-		
-		// supported preview sizes
-        mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
-        //for(Camera.Size str: mSupportedPreviewSizes)
-        //        Log.e(TAG, str.width + "/" + str.height);
+		autoFocusCallback = autoFocusCb;
+		mCamera = camera;
 
 		// Install a SurfaceHolder.Callback so we get notified when the
 		// underlying surface is created and destroyed.
@@ -46,29 +43,29 @@ public class CameraPreview extends SurfaceView implements
 		mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 	}
 
-//	@Override
-//	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-//		final int width = resolveSize(getSuggestedMinimumWidth(),
-//				widthMeasureSpec);
-//		final int height = resolveSize(getSuggestedMinimumHeight(),
-//				heightMeasureSpec);
-//
-//		if (mSupportedPreviewSizes != null) {
-//			mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, width,
-//					height);
-//		}
-//
-//		float ratio;
-//		if (mPreviewSize.height >= mPreviewSize.width)
-//			ratio = (float) mPreviewSize.height / (float) mPreviewSize.width;
-//		else
-//			ratio = (float) mPreviewSize.width / (float) mPreviewSize.height;
-//
-//		// One of these methods should be used, second method squishes preview
-//		// slightly
-//		setMeasuredDimension(width, (int) (width * ratio));
-//		// setMeasuredDimension((int) (width * ratio), height);
-//	}
+	// @Override
+	// protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+	// final int width = resolveSize(getSuggestedMinimumWidth(),
+	// widthMeasureSpec);
+	// final int height = resolveSize(getSuggestedMinimumHeight(),
+	// heightMeasureSpec);
+	//
+	// if (mSupportedPreviewSizes != null) {
+	// mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, width,
+	// height);
+	// }
+	//
+	// float ratio;
+	// if (mPreviewSize.height >= mPreviewSize.width)
+	// ratio = (float) mPreviewSize.height / (float) mPreviewSize.width;
+	// else
+	// ratio = (float) mPreviewSize.width / (float) mPreviewSize.height;
+	//
+	// // One of these methods should be used, second method squishes preview
+	// // slightly
+	// setMeasuredDimension(width, (int) (width * ratio));
+	// // setMeasuredDimension((int) (width * ratio), height);
+	// }
 
 	private Camera.Size getOptimalPreviewSize(List<Camera.Size> sizes, int w,
 			int h) {
@@ -107,14 +104,65 @@ public class CameraPreview extends SurfaceView implements
 		return optimalSize;
 	}
 
+	public void startPreview() {
+		if (!onPreview && (mCamera != null)) {
+			// set preview size and make any resize, rotate or
+			// reformatting changes here
+
+			// start preview with new settings
+			try {
+				// set preview size
+				// Camera.Parameters parameters = mCamera.getParameters();
+				// parameters.setPreviewSize(mPreviewSize.width,
+				// mPreviewSize.height);
+				// mCamera.setParameters(parameters);
+				// Set Camera parameters
+				Camera.Parameters params = mCamera.getParameters();
+
+				// supported preview sizes
+				mSupportedPreviewSizes = mCamera.getParameters()
+						.getSupportedPreviewSizes();
+				// for(Camera.Size str: mSupportedPreviewSizes)
+				// Log.e(TAG, str.width + "/" + str.height);
+
+				params.setPreviewSize(640, 480);
+				params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+
+				// Hard code camera surface rotation 90 degs to match Activity
+				// view
+				// in portrait
+				mCamera.setDisplayOrientation(90);
+
+				mCamera.setPreviewDisplay(mHolder);
+				mCamera.setPreviewCallback(previewCallback);
+				mCamera.startPreview();
+				onPreview = true;
+			} catch (Exception e) {
+				Log.d(TAG, "Error starting camera preview: " + e.getMessage());
+			}
+		}
+	}
+
+	public void stopPreview() {
+		try {
+			if (onPreview && (mCamera != null)) {
+				mCamera.setPreviewCallback(null);
+				mCamera.stopPreview();
+				onPreview = false;
+			}
+		} catch (Exception e) {
+			Log.d(TAG, "Error stopping camera preview: " + e.getMessage());
+		}
+	}
+	
+	public boolean isOnPreview() {
+		return onPreview;
+	}
+
 	public void surfaceCreated(SurfaceHolder holder) {
 		// The Surface has been created, now tell the camera where to draw the
 		// preview.
-		try {
-			mCamera.setPreviewDisplay(holder);
-		} catch (IOException e) {
-			Log.d("Camera", "Error setting camera preview: " + e.getMessage());
-		}
+		startPreview();
 	}
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
@@ -131,32 +179,7 @@ public class CameraPreview extends SurfaceView implements
 		}
 
 		// stop preview before making changes
-		try {
-			mCamera.stopPreview();
-		} catch (Exception e) {
-			// ignore: tried to stop a non-existent preview
-		}
-
-		// set preview size and make any resize, rotate or
-		// reformatting changes here
-
-		// start preview with new settings
-		try {
-			// set preview size
-//			Camera.Parameters parameters = mCamera.getParameters();
-//            parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
-//            mCamera.setParameters(parameters);
-			
-			// Hard code camera surface rotation 90 degs to match Activity view
-			// in portrait
-			mCamera.setDisplayOrientation(90);
-
-			mCamera.setPreviewDisplay(mHolder);
-			mCamera.setPreviewCallback(previewCallback);
-			mCamera.startPreview();
-			mCamera.autoFocus(autoFocusCallback);
-		} catch (Exception e) {
-			Log.d(TAG, "Error starting camera preview: " + e.getMessage());
-		}
+		stopPreview();
+		startPreview();
 	}
 }

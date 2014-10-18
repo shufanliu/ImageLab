@@ -22,7 +22,7 @@ public class PreviewFrame extends FrameLayout {
 
 	    switch (e.getAction()) {
 	        case MotionEvent.ACTION_MOVE:
-	        	CaptureFragment.mCamera.autoFocus(CaptureFragment.autoFocusCB);
+	        	//CaptureFragment.mCamera.autoFocus(CaptureFragment.autoFocusCB);
 	    }
 	    return true;
 	}

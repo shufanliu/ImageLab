@@ -38,21 +38,31 @@ public class CaptureFragment extends Fragment {
 	private static final String TAG = "CameraFragment";
 	
 	private View rootView;
-	public static Camera mCamera;
+	private Camera mCamera;
 	private CameraPreview mPreview;
 	private Button snapButton;
 	private Button focusButton;
-	private boolean onPreview = true;
 	private int currentZoomLevel = 0, maxZoomLevel = 0;
 	private TextView statusText;
 
 	ImageScanner scanner;
-	private Handler autoFocusHandler;
-	public static AutoFocusCallback autoFocusCB;
+	
 	private boolean barcodeScanned = false;
 
 	static {
 		System.loadLibrary("iconv");
+	}
+	
+	/** A safe way to get an instance of the Camera object. */
+	public static Camera getCameraInstance() {
+		Camera c = null;
+		try {
+			c = Camera.open(); // attempt to get a Camera instance
+		} catch (Exception e) {
+			// Camera is not available (in use or does not exist)
+			Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+		}
+		return c; // returns null if camera is unavailable
 	}
 	
 	@Override
@@ -71,6 +81,7 @@ public class CaptureFragment extends Fragment {
 	            LayoutParams lp = previewFrame.getLayoutParams();
 	            lp.width = (int) (previewFrame.getHeight() / 4.0 * 3);
 	            previewFrame.setLayoutParams(lp);
+	            mPreview.startPreview();
 	        }
 	    });
 
@@ -89,21 +100,18 @@ public class CaptureFragment extends Fragment {
 
 			@Override
 			public void onClick(View v) {
+				boolean onPreview = mPreview.isOnPreview();
 				if (onPreview) {
-					onPreview = false;
-					mCamera.takePicture(null, null, mPicture);
+					mCamera.takePicture(null, null, pictureCb);
 					snapButton.setText("Recapture");
 				} else {
-					onPreview = true;
 	                if (barcodeScanned) {
 	                    barcodeScanned = false;
 	                    statusText.setText("Scanning...");
 	                }
-					mCamera.setPreviewCallback(previewCb);
-					mCamera.startPreview();
-					rootView.findViewById(R.id.frameLayout1).postDelayed(doAutoFocus, 1000);
+					mPreview.startPreview();
+					postAutoFocus();
 					snapButton.setText("Capture");
-					//mCamera.autoFocus(autoFocusCB);
 				}
 			}
 		});
@@ -114,6 +122,7 @@ public class CaptureFragment extends Fragment {
 
 			@Override
 			public void onClick(View v) {
+				boolean onPreview = mPreview.isOnPreview();
 				if (onPreview) {
 					Log.e(TAG, "try to focus");
 					mCamera.autoFocus(autoFocusCB);
@@ -121,24 +130,15 @@ public class CaptureFragment extends Fragment {
 			}
 		});
 		
-		// Setup Camera
-		autoFocusHandler = new Handler();
-		cameraSetup();
-
-		return rootView;
-	}
-
-	private void cameraSetup() {
-
-		// Create an instance of Camera
-		mCamera = getCameraInstance();
-
-		// Set Camera parameters
-		Camera.Parameters params = mCamera.getParameters();
-		params.setPreviewSize(640, 480);
-		params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-
+		// Create our Preview view and set it as the content of our
+		// activity.
+		mCamera = getCameraInstance(); 
+		mPreview = new CameraPreview(getActivity(), mCamera, previewCb,
+				autoFocusCB);
+		
 		// Setup the ZoomControl
+		Camera.Parameters params = mCamera.getParameters();
+
 		ZoomControls zoomControls = (ZoomControls) rootView
 				.findViewById(R.id.zoomControls1);
 
@@ -174,49 +174,30 @@ public class CaptureFragment extends Fragment {
 		} else {
 			zoomControls.setVisibility(View.GONE);
 		}
-
 		mCamera.setParameters(params);
 
-		// Mimic continuous auto-focusing
-		autoFocusCB = new AutoFocusCallback() {
-			@Override
-			public void onAutoFocus(boolean success, Camera camera) {
-				Log.e(TAG, "onAutoFocus, onPreview = " + Boolean.toString(onPreview));
-				//autoFocusHandler.postDelayed(doAutoFocus, 1000);
-				rootView.findViewById(R.id.frameLayout1).postDelayed(doAutoFocus, 1000);
-			}
-		};
-		
-		// Create our Preview view and set it as the content of our
-		// activity.
-		mPreview = new CameraPreview(getActivity(), mCamera, previewCb,
-				autoFocusCB);
-
-		FrameLayout preview = (FrameLayout) rootView
-				.findViewById(R.id.frameLayout1);
-		preview.addView(mPreview);
+		previewFrame.addView(mPreview);
 		ImageView grid = (ImageView) rootView.findViewById(R.id.imageView1);
-		preview.bringChildToFront(grid);
-		
-    	onPreview = true;		
-        mCamera.startPreview();
-        rootView.findViewById(R.id.frameLayout1).postDelayed(doAutoFocus, 2000);
-        //autoFocusHandler.postDelayed(doAutoFocus, 1000);
+		previewFrame.bringChildToFront(grid);
+
+		return rootView;
+	}
+	
+	private void postAutoFocus() {
+		rootView.findViewById(R.id.frameLayout1).postDelayed(doAutoFocus, 1000);
 	}
 
-	/** A safe way to get an instance of the Camera object. */
-	public static Camera getCameraInstance() {
-		Camera c = null;
-		try {
-			c = Camera.open(); // attempt to get a Camera instance
-		} catch (Exception e) {
-			// Camera is not available (in use or does not exist)
-			Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+	// Mimic continuous auto-focusing
+	private AutoFocusCallback autoFocusCB = new AutoFocusCallback() {
+		@Override
+		public void onAutoFocus(boolean success, Camera camera) {
+			boolean onPreview = mPreview.isOnPreview();
+			Log.e(TAG, "onAutoFocus, onPreview = " + Boolean.toString(onPreview));
+			postAutoFocus();
 		}
-		return c; // returns null if camera is unavailable
-	}
+	};
 
-	private PictureCallback mPicture = new PictureCallback() {
+	private PictureCallback pictureCb = new PictureCallback() {
 
 		@Override
 		public void onPictureTaken(byte[] data, Camera camera) {
@@ -247,12 +228,13 @@ public class CaptureFragment extends Fragment {
 			((TextView) getActivity().findViewById(R.id.sText3)).setText(String
 					.format(" %s กำ %s ", meanB, meanRErr));
 
-
 			// save the result in db
 			HistoryDataSource datasource = new HistoryDataSource(getActivity());
 			datasource.open();
 			History history = datasource.createHistory(outputText);
 			datasource.close();
+			
+			mPreview.stopPreview();
 		}
 	};
 
@@ -283,35 +265,29 @@ public class CaptureFragment extends Fragment {
 
     private Runnable doAutoFocus = new Runnable() {
         public void run() {
+        	boolean onPreview = mPreview.isOnPreview();
         	Log.e(TAG, "try to focus, onPreview = " + Boolean.toString(onPreview));
             if (onPreview)
                 mCamera.autoFocus(autoFocusCB);
         }
     };
-
+       
 	@Override
 	public void onPause() {
 		super.onPause();
-		releaseCamera(); // release the camera immediately on pause event
+		mPreview.stopPreview();
+		mPreview.getHolder().removeCallback(mPreview);
+		mCamera.setPreviewCallback(null);
+		mCamera.release();
+		mCamera = null;
 	}
 
 	@Override
 	public void onResume() {
 		super.onResume();
-		if (mCamera == null) {
-			cameraSetup();
-		}
-	}
-
-	private void releaseCamera() {
-		if (mCamera != null) {
-			onPreview = false;
-			mCamera.stopPreview();
-			mPreview.getHolder().removeCallback(mPreview);
-			mCamera.setPreviewCallback(null);
-			mCamera.release(); // release the camera for other applications
-			mCamera = null;
-		}
+		mCamera.setPreviewCallback(previewCb);
+		mPreview.startPreview();
+		postAutoFocus();
 	}
 
 	@Override
