@@ -12,7 +12,13 @@ import net.sourceforge.zbar.SymbolSet;
 import com.shufanliu.imagelab.R;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
@@ -34,9 +40,9 @@ import android.widget.TextView;
 import android.widget.ZoomControls;
 
 public class CaptureFragment extends Fragment {
-	
+
 	private static final String TAG = "CameraFragment";
-	
+
 	private View rootView;
 	private Camera mCamera;
 	private CameraPreview mPreview;
@@ -46,13 +52,13 @@ public class CaptureFragment extends Fragment {
 	private TextView statusText;
 
 	ImageScanner scanner;
-	
+
 	private boolean barcodeScanned = false;
 
 	static {
 		System.loadLibrary("iconv");
 	}
-	
+
 	/** A safe way to get an instance of the Camera object. */
 	public static Camera getCameraInstance() {
 		Camera c = null;
@@ -64,26 +70,27 @@ public class CaptureFragment extends Fragment {
 		}
 		return c; // returns null if camera is unavailable
 	}
-	
+
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 		rootView = inflater
 				.inflate(R.layout.fragment_capture, container, false);
-		
+
 		// Make camera preview to have ratio of 4:3
-		final FrameLayout previewFrame = (FrameLayout) rootView.findViewById(R.id.frameLayout1);
-		
+		final FrameLayout previewFrame = (FrameLayout) rootView
+				.findViewById(R.id.previewFrameLayout);
+
 		previewFrame.post(new Runnable() {
 
-	        @Override
-	        public void run() {             
-	            LayoutParams lp = previewFrame.getLayoutParams();
-	            lp.width = (int) (previewFrame.getHeight() / 4.0 * 3);
-	            previewFrame.setLayoutParams(lp);
-	            mPreview.startPreview();
-	        }
-	    });
+			@Override
+			public void run() {
+				LayoutParams lp = previewFrame.getLayoutParams();
+				lp.width = (int) (previewFrame.getHeight() / 4.0 * 3);
+				previewFrame.setLayoutParams(lp);
+				mPreview.startPreview();
+			}
+		});
 
 		// Setup Barcode Scanner
 		/* Instance barcode scanner */
@@ -105,17 +112,17 @@ public class CaptureFragment extends Fragment {
 					mCamera.takePicture(null, null, pictureCb);
 					snapButton.setText("Recapture");
 				} else {
-	                if (barcodeScanned) {
-	                    barcodeScanned = false;
-	                    statusText.setText("Scanning...");
-	                }
+					if (barcodeScanned) {
+						barcodeScanned = false;
+						statusText.setText("Scanning...");
+					}
 					mPreview.startPreview();
 					postAutoFocus();
 					snapButton.setText("Capture");
 				}
 			}
 		});
-		
+
 		// Setup the focus button
 		focusButton = (Button) rootView.findViewById(R.id.button1);
 		focusButton.setOnClickListener(new OnClickListener() {
@@ -129,13 +136,13 @@ public class CaptureFragment extends Fragment {
 				}
 			}
 		});
-		
+
 		// Create our Preview view and set it as the content of our
 		// activity.
-		mCamera = getCameraInstance(); 
+		mCamera = getCameraInstance();
 		mPreview = new CameraPreview(getActivity(), mCamera, previewCb,
 				autoFocusCB);
-		
+
 		// Setup the ZoomControl
 		Camera.Parameters params = mCamera.getParameters();
 
@@ -177,14 +184,48 @@ public class CaptureFragment extends Fragment {
 		mCamera.setParameters(params);
 
 		previewFrame.addView(mPreview);
-		ImageView grid = (ImageView) rootView.findViewById(R.id.imageView1);
-		previewFrame.bringChildToFront(grid);
+
+		// Setup focusing frame
+		ImageView focusingFrameView = (ImageView) rootView
+				.findViewById(R.id.focusingFrameView);
+
+		// Left top: (x1, y1), Right bottom: (x2, y2)
+		int x1 = 160;
+		int y1 = 240;
+		int x2 = 160 + 160;
+		int y2 = 240 + 160;
+
+		Bitmap myBitmap = Bitmap
+				.createBitmap(480, 640, Bitmap.Config.ARGB_8888);
+		Paint myPaint = new Paint();
+		myPaint.setStyle(Paint.Style.STROKE);
+		myPaint.setColor(Color.RED);
+
+		// Create a new image bitmap and attach a brand new canvas to it
+		Bitmap tempBitmap = Bitmap.createBitmap(myBitmap.getWidth(),
+				myBitmap.getHeight(), Bitmap.Config.ARGB_8888);
+		Canvas tempCanvas = new Canvas(tempBitmap);
+
+		// Draw the image bitmap into the cavas
+		tempCanvas.drawBitmap(myBitmap, 0, 0, null);
+
+		// Draw everything else you want into the canvas, in this example a
+		// rectangle with rounded edges
+		tempCanvas.drawRect(new RectF(x1, y1, x2, y2), myPaint);
+
+		// Attach the canvas to the ImageView
+		focusingFrameView.setImageDrawable(new BitmapDrawable(getResources(),
+				tempBitmap));
+
+		// Bring focusing frame to the front
+		previewFrame.bringChildToFront(focusingFrameView);
 
 		return rootView;
 	}
-	
+
 	private void postAutoFocus() {
-		rootView.findViewById(R.id.frameLayout1).postDelayed(doAutoFocus, 1000);
+		rootView.findViewById(R.id.previewFrameLayout).postDelayed(doAutoFocus,
+				1000);
 	}
 
 	// Mimic continuous auto-focusing
@@ -192,7 +233,8 @@ public class CaptureFragment extends Fragment {
 		@Override
 		public void onAutoFocus(boolean success, Camera camera) {
 			boolean onPreview = mPreview.isOnPreview();
-			Log.e(TAG, "onAutoFocus, onPreview = " + Boolean.toString(onPreview));
+			Log.e(TAG,
+					"onAutoFocus, onPreview = " + Boolean.toString(onPreview));
 			postAutoFocus();
 		}
 	};
@@ -209,7 +251,7 @@ public class CaptureFragment extends Fragment {
 			String meanR = odrValue.getMeanRGBStr(0);
 			String meanG = odrValue.getMeanRGBStr(1);
 			String meanB = odrValue.getMeanRGBStr(2);
-			
+
 			String meanRErr = odrValue.getMeanRGBErrStr(0);
 			String meanGErr = odrValue.getMeanRGBErrStr(1);
 			String meanBErr = odrValue.getMeanRGBErrStr(2);
@@ -217,10 +259,9 @@ public class CaptureFragment extends Fragment {
 			// display the result
 			String outputText = String.format(
 					"t = %s, R = %s กำ %s, G = %s กำ %s, B = %s กำ %s",
-					new SimpleDateFormat("HH:mm:ss").format(new Date()),
-					meanR, meanRErr, meanG, meanGErr, meanB,
-					meanBErr);
-			
+					new SimpleDateFormat("HH:mm:ss").format(new Date()), meanR,
+					meanRErr, meanG, meanGErr, meanB, meanBErr);
+
 			((TextView) getActivity().findViewById(R.id.sText1)).setText(String
 					.format(" %s กำ %s ", meanR, meanRErr));
 			((TextView) getActivity().findViewById(R.id.sText2)).setText(String
@@ -233,7 +274,7 @@ public class CaptureFragment extends Fragment {
 			datasource.open();
 			History history = datasource.createHistory(outputText);
 			datasource.close();
-			
+
 			mPreview.stopPreview();
 		}
 	};
@@ -250,9 +291,9 @@ public class CaptureFragment extends Fragment {
 			int result = scanner.scanImage(barcode);
 
 			if (result != 0) {
-//				onPreview = false;
-//				mCamera.setPreviewCallback(null);
-//				mCamera.stopPreview();
+				// onPreview = false;
+				// mCamera.setPreviewCallback(null);
+				// mCamera.stopPreview();
 
 				SymbolSet syms = scanner.getResults();
 				for (Symbol sym : syms) {
@@ -263,15 +304,16 @@ public class CaptureFragment extends Fragment {
 		}
 	};
 
-    private Runnable doAutoFocus = new Runnable() {
-        public void run() {
-        	boolean onPreview = mPreview.isOnPreview();
-        	Log.e(TAG, "try to focus, onPreview = " + Boolean.toString(onPreview));
-            if (onPreview)
-                mCamera.autoFocus(autoFocusCB);
-        }
-    };
-       
+	private Runnable doAutoFocus = new Runnable() {
+		public void run() {
+			boolean onPreview = mPreview.isOnPreview();
+			Log.e(TAG,
+					"try to focus, onPreview = " + Boolean.toString(onPreview));
+			if (onPreview)
+				mCamera.autoFocus(autoFocusCB);
+		}
+	};
+
 	@Override
 	public void onPause() {
 		super.onPause();

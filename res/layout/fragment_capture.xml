@@ -11,21 +11,20 @@
     tools:context=".MainActivity$CaptureFragment" >
 
     <FrameLayout
-        android:id="@+id/frameLayout1"
+        android:id="@+id/previewFrameLayout"
         android:layout_width="fill_parent"
         android:layout_height="0dip"
         android:layout_gravity="center"
         android:layout_weight="0.8" >
 
         <ImageView
-            android:id="@+id/imageView1"
+            android:id="@+id/focusingFrameView"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
             android:layout_gravity="center|fill"
             android:background="@android:color/transparent"
             android:contentDescription="@string/app_desc"
-            android:scaleType="fitXY"
-            android:src="@drawable/grid_vertical_circle" />
+            android:scaleType="fitXY"/>
     </FrameLayout>
 
     <LinearLayout

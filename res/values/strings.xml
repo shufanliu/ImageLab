@@ -2,7 +2,7 @@
 <resources>
 
     <string name="app_name">ImageLab</string>
-    <string name="version">0.31</string>
+    <string name="version">0.4</string>
     <string name="title_home">Home</string>
     <string name="title_capture">Capture</string>
     <string name="title_history">History</string>
