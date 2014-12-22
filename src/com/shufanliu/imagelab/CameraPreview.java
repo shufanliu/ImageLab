@@ -1,6 +1,5 @@
 package com.shufanliu.imagelab;
 
-import java.io.IOException;
 import java.util.List;
 
 import android.content.Context;
@@ -131,7 +130,7 @@ public class CameraPreview extends SurfaceView implements
 				// Hard code camera surface rotation 90 degs to match Activity
 				// view
 				// in portrait
-				mCamera.setDisplayOrientation(90);
+				mCamera.setDisplayOrientation(Settings.getInstance().previewDisplayOrientation);
 
 				mCamera.setPreviewDisplay(mHolder);
 				mCamera.setPreviewCallback(previewCallback);

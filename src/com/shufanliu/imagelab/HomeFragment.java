@@ -30,10 +30,10 @@ public class HomeFragment extends Fragment {
 			@Override
 			public void onCheckedChanged(RadioGroup group, int checkedId) {
 				if (checkedId == R.id.radio0) {
-					ODRValue.setNumOfStrips(4);
+
 					textView.setText("Number of Strips is now set to 4.");
 				} else {
-					ODRValue.setNumOfStrips(2);
+
 					textView.setText("Number of Strips is now set to 2.");
 				}
 			}

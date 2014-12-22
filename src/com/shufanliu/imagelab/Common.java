@@ -16,6 +16,10 @@ import android.util.Log;
 public class Common {
 
 	public static boolean DEBUG = false;
+
+	public static double getSE(double x, double meanX) {
+		return Math.pow((x - meanX), 2.0);
+	}
 	
 	public static float getMean(float[] values) {
 		float sum = 0;
@@ -40,9 +44,7 @@ public class Common {
         return (float) Math.sqrt(getSampleVariance(values));
     }
 	
-
-	
-	public static String getSigFig(float value, int n) {
+	public static String getSigFig(double value, int n) {
 		String result = String.format("%.10f", value);
 		int k = (int) (Math.log(Math.abs(value)) / Math.log(10));
 		if ((k + 1) >= n) {
@@ -69,7 +71,7 @@ public class Common {
 		return result;
 	}
 	
-	public static String[] getSigFig(float[] values, int n) {
+	public static String[] getSigFig(double[] values, int n) {
 		String[] result = new String[values.length];
 		for (int i = 0; i < values.length; i++) {
 		    result[i] = getSigFig(values[i], n);

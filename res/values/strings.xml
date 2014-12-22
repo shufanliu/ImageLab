@@ -2,7 +2,7 @@
 <resources>
 
     <string name="app_name">ImageLab</string>
-    <string name="version">0.4</string>
+    <string name="version">0.5</string>
     <string name="title_home">Home</string>
     <string name="title_capture">Capture</string>
     <string name="title_history">History</string>
@@ -15,12 +15,11 @@
     <string name="btn_capture">Capture</string>
     <string name="status">Status: Capture Mode</string>
     <string name="helpText">ImageLab - Mobile Image Analyzer.\n\nNavigate to the capture tab and press the capture button to start to analyze.</string>
-    <string name="stripLabel01">Channel Value</string>
-    <string name="stripLabel02">ODR</string>
-    <string name="strip1Label">R: </string>
-    <string name="strip2Label">G: </string>
-    <string name="strip3Label">B: </string>
     <string name="contentDesc">Mobile Image Analyzer</string>
     <string name="under_construction">This page is currently under construction. Please stay tune for the next version.</string>
-
+	<string name="capture_layout">Capture Layout</string>
+	<string name="circle">Circle</string>
+	<string name="square">Square</string>
+	<string name="test_strip">Test Strip</string>
+    
 </resources>

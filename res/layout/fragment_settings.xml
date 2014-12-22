@@ -11,10 +11,30 @@
     tools:context=".MainActivity$SettingsFragment" >
 
     <TextView
-        android:id="@+id/ucText"
+        android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/under_construction"
+        android:text="@string/capture_layout"
         android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <RadioGroup
+        android:id="@+id/captureLayoutRG"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" >
+
+        <RadioButton
+            android:id="@+id/radioCircle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/circle" />
+
+        <RadioButton
+            android:id="@+id/radioSquare"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/square" />
+
+    </RadioGroup>
 
 </LinearLayout>

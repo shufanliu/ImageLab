@@ -1,8 +1,5 @@
 package com.shufanliu.imagelab;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 import net.sourceforge.zbar.Config;
 import net.sourceforge.zbar.Image;
 import net.sourceforge.zbar.ImageScanner;
@@ -12,12 +9,10 @@ import net.sourceforge.zbar.SymbolSet;
 import com.shufanliu.imagelab.R;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
@@ -25,7 +20,6 @@ import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.PreviewCallback;
 import android.hardware.Camera.Size;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -33,9 +27,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ZoomControls;
 
@@ -47,9 +43,11 @@ public class CaptureFragment extends Fragment {
 	private Camera mCamera;
 	private CameraPreview mPreview;
 	private Button snapButton;
-	private Button focusButton;
 	private int currentZoomLevel = 0, maxZoomLevel = 0;
 	private TextView statusText;
+	private ImageView focusingFrameView;
+	private FocusingFrame mFocusingFrame;
+	private static ArrayAdapter<SummaryStatistics.Summary> adapter;
 
 	ImageScanner scanner;
 
@@ -123,20 +121,6 @@ public class CaptureFragment extends Fragment {
 			}
 		});
 
-		// Setup the focus button
-		focusButton = (Button) rootView.findViewById(R.id.button1);
-		focusButton.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View v) {
-				boolean onPreview = mPreview.isOnPreview();
-				if (onPreview) {
-					Log.e(TAG, "try to focus");
-					mCamera.autoFocus(autoFocusCB);
-				}
-			}
-		});
-
 		// Create our Preview view and set it as the content of our
 		// activity.
 		mCamera = getCameraInstance();
@@ -150,34 +134,38 @@ public class CaptureFragment extends Fragment {
 				.findViewById(R.id.zoomControls1);
 
 		if (params.isZoomSupported()) {
-			maxZoomLevel = params.getMaxZoom();
+			try {
+				maxZoomLevel = params.getMaxZoom();
 
-			zoomControls.setIsZoomInEnabled(true);
-			zoomControls.setIsZoomOutEnabled(true);
+				zoomControls.setIsZoomInEnabled(true);
+				zoomControls.setIsZoomOutEnabled(true);
 
-			zoomControls.setOnZoomInClickListener(new OnClickListener() {
-				public void onClick(View v) {
-					Camera.Parameters params = mCamera.getParameters();
-					int currentZoomLevel = params.getZoom();
-					if (currentZoomLevel < maxZoomLevel) {
-						currentZoomLevel++;
-						params.setZoom(currentZoomLevel);
-						mCamera.setParameters(params);
+				zoomControls.setOnZoomInClickListener(new OnClickListener() {
+					public void onClick(View v) {
+						Camera.Parameters params = mCamera.getParameters();
+						int currentZoomLevel = params.getZoom();
+						if (currentZoomLevel < maxZoomLevel) {
+							currentZoomLevel++;
+							params.setZoom(currentZoomLevel);
+							mCamera.setParameters(params);
+						}
 					}
-				}
-			});
+				});
 
-			zoomControls.setOnZoomOutClickListener(new OnClickListener() {
-				public void onClick(View v) {
-					Camera.Parameters params = mCamera.getParameters();
-					currentZoomLevel = params.getZoom();
-					if (currentZoomLevel > 0) {
-						currentZoomLevel--;
-						params.setZoom(currentZoomLevel);
-						mCamera.setParameters(params);
+				zoomControls.setOnZoomOutClickListener(new OnClickListener() {
+					public void onClick(View v) {
+						Camera.Parameters params = mCamera.getParameters();
+						currentZoomLevel = params.getZoom();
+						if (currentZoomLevel > 0) {
+							currentZoomLevel--;
+							params.setZoom(currentZoomLevel);
+							mCamera.setParameters(params);
+						}
 					}
-				}
-			});
+				});
+			} catch (Exception exception) {
+				Log.e(TAG, exception.getMessage());
+			}
 		} else {
 			zoomControls.setVisibility(View.GONE);
 		}
@@ -186,36 +174,15 @@ public class CaptureFragment extends Fragment {
 		previewFrame.addView(mPreview);
 
 		// Setup focusing frame
-		ImageView focusingFrameView = (ImageView) rootView
+		focusingFrameView = (ImageView) rootView
 				.findViewById(R.id.focusingFrameView);
 
-		// Left top: (x1, y1), Right bottom: (x2, y2)
-		int x1 = 160;
-		int y1 = 240;
-		int x2 = 160 + 160;
-		int y2 = 240 + 160;
-
-		Bitmap myBitmap = Bitmap
-				.createBitmap(480, 640, Bitmap.Config.ARGB_8888);
-		Paint myPaint = new Paint();
-		myPaint.setStyle(Paint.Style.STROKE);
-		myPaint.setColor(Color.RED);
-
-		// Create a new image bitmap and attach a brand new canvas to it
-		Bitmap tempBitmap = Bitmap.createBitmap(myBitmap.getWidth(),
-				myBitmap.getHeight(), Bitmap.Config.ARGB_8888);
-		Canvas tempCanvas = new Canvas(tempBitmap);
-
-		// Draw the image bitmap into the cavas
-		tempCanvas.drawBitmap(myBitmap, 0, 0, null);
-
-		// Draw everything else you want into the canvas, in this example a
-		// rectangle with rounded edges
-		tempCanvas.drawRect(new RectF(x1, y1, x2, y2), myPaint);
+		mFocusingFrame = FocusingFrame.getFocusingFrame();
+		Bitmap myBitmap = mFocusingFrame.getBitmap();
 
 		// Attach the canvas to the ImageView
 		focusingFrameView.setImageDrawable(new BitmapDrawable(getResources(),
-				tempBitmap));
+				myBitmap));
 
 		// Bring focusing frame to the front
 		previewFrame.bringChildToFront(focusingFrameView);
@@ -244,35 +211,29 @@ public class CaptureFragment extends Fragment {
 		@Override
 		public void onPictureTaken(byte[] data, Camera camera) {
 
-			// calculate ODR
-			ODRValue odrValue = new ODRValue();
-			odrValue.calculateRGBCircle(BitmapFactory.decodeByteArray(data, 0,
-					data.length));
-			String meanR = odrValue.getMeanRGBStr(0);
-			String meanG = odrValue.getMeanRGBStr(1);
-			String meanB = odrValue.getMeanRGBStr(2);
+			// Analyze picture taken
+			FocusingFrame ff = FocusingFrame.getFocusingFrame();
+			CaptureAnalysis captureAnalysis = ff.analyze(BitmapFactory
+					.decodeByteArray(data, 0, data.length));
+			// TODO: handle multiple ss
+			SummaryStatistics ss = captureAnalysis.getSummaryStatsList().get(0);
 
-			String meanRErr = odrValue.getMeanRGBErrStr(0);
-			String meanGErr = odrValue.getMeanRGBErrStr(1);
-			String meanBErr = odrValue.getMeanRGBErrStr(2);
+			// Display result in a popup dialog
+			new AlertDialog.Builder(rootView.getContext())
+		    .setTitle("Capture Result")
+		    .setMessage(ss.toString())
+		    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+		        public void onClick(DialogInterface dialog, int which) { 
+		            // continue with delete
+		        }
+		     })
+		     .show();
 
-			// display the result
-			String outputText = String.format(
-					"t = %s, R = %s กำ %s, G = %s กำ %s, B = %s กำ %s",
-					new SimpleDateFormat("HH:mm:ss").format(new Date()), meanR,
-					meanRErr, meanG, meanGErr, meanB, meanBErr);
-
-			((TextView) getActivity().findViewById(R.id.sText1)).setText(String
-					.format(" %s กำ %s ", meanR, meanRErr));
-			((TextView) getActivity().findViewById(R.id.sText2)).setText(String
-					.format(" %s กำ %s ", meanG, meanGErr));
-			((TextView) getActivity().findViewById(R.id.sText3)).setText(String
-					.format(" %s กำ %s ", meanB, meanRErr));
-
+			// TODO:
 			// save the result in db
 			HistoryDataSource datasource = new HistoryDataSource(getActivity());
 			datasource.open();
-			History history = datasource.createHistory(outputText);
+			datasource.createHistory(ss.toString());
 			datasource.close();
 
 			mPreview.stopPreview();
